@@ -12,11 +12,32 @@ from bs4 import BeautifulSoup
 class Env:
     """Class to represent the environment state"""
 
-    parser: argparse.ArgumentParser
+    parser: argparse.ArgumentParser = None
     args: argparse.Namespace = None
 
     def __post_init__(self):
+        self.parser = self.get_parser()
         self.args = self.parser.parse_args()
+
+    def get_parser(self):
+        parser = argparse.ArgumentParser(
+            description=(
+                "Compute fantasy football "
+                "expected points based on player prop lines"
+            )
+        )
+
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            dest="vlevel",
+            action="count",
+            default=0,
+            help="enable verbose output",
+        )
+
+        return parser
+
 
 
 @dataclass
@@ -28,26 +49,6 @@ class Player:
     adp: int
     fp_rank: int
     xrank: int
-
-
-def get_parser():
-    parser = argparse.ArgumentParser(
-        description=(
-            "Compute fantasy football "
-            "expected points based on player prop lines"
-        )
-    )
-
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        dest="vlevel",
-        action="count",
-        default=0,
-        help="enable verbose output",
-    )
-
-    return parser
 
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
@@ -75,7 +76,7 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
 
 def props_ev():
-    env = Env(get_parser())
+    env = Env()
 
     # props_url = "https://www.vegasinsider.com/nfl/odds/player-prop-betting-odds/"
     # props_req = urllib.request.Request(props_url, headers={'User-Agent': 'Mozilla/5.0'})
