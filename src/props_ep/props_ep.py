@@ -192,6 +192,20 @@ def compute_prop_points(env: Env, player_dict: dict[Player]):
             player.prop_points += points_dict[k] * float(v.replace(",", ""))
 
 
+def display_position(env: Env, player_dict: dict[Player], position: str):
+    player_list = []
+    for _, player in player_dict.items():
+        if player.position == position:
+            player_list.append(player)
+
+    player_list.sort(key=lambda player: player.prop_points, reverse=True)
+
+    print(f"{position} Ranks")
+    for p in player_list:
+        print(p)
+    print("")
+
+
 def props_ev():
     env = Env()
 
@@ -204,6 +218,11 @@ def props_ev():
     if env.args.vlevel > 0:
         for k, v in player_dict.items():
             print(v)
+
+    display_position(env, player_dict, "QB")
+    display_position(env, player_dict, "RB")
+    display_position(env, player_dict, "WR")
+    display_position(env, player_dict, "TE")
 
 
 if __name__ == "__main__":
