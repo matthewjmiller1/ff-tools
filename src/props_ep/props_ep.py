@@ -201,8 +201,13 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
     player_list.sort(key=lambda player: player.prop_points, reverse=True)
 
     print(f"{position} Ranks")
+    rank = 1
     for p in player_list:
-        print(p)
+        print(f"{rank}. {p.name} PropPoints={p.prop_points:.2f} "
+              f"ADP={p.adp} XRank={p.xrank} FpRank={p.fp_rank}")
+        prop_list = [f"{k}={v}" for k, v in p.props.items()]
+        print("   " + " ".join(prop_list))
+        rank += 1
     print("")
 
 
