@@ -6,6 +6,7 @@ import typing
 import urllib.request
 from dataclasses import dataclass, field
 from bs4 import BeautifulSoup
+from tabulate import tabulate
 
 
 @dataclass
@@ -143,6 +144,21 @@ def props_points_dict() -> dict[str]:
     }
 
 
+def position_props(position: str) -> list[str]:
+    pass_stats = ["pass_yards", "pass_tds", "ints"]
+    rush_stats = ["rush_yards", "rush_tds"]
+    receive_stats = ["receive_yards", "receive_tds", "receptions"]
+
+    position_dict = {
+        "QB": pass_stats + rush_stats,
+        "RB": rush_stats + receive_stats,
+        "WR": receive_stats,
+        "TE": receive_stats,
+    }
+
+    return position_dict[position]
+
+
 def name_fixup_dict() -> dict[str]:
     return {
         # Initials
@@ -202,12 +218,19 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
 
     print(f"{position} Ranks")
     rank = 1
+    headers = ["Rank", "Name", "Prop Points", "ADP", "XRank", "FP Rank"]
+    headers.extend(position_props(position))
+    table = []
     for p in player_list:
-        print(f"{rank}. {p.name} PropPoints={p.prop_points:.2f} "
-              f"ADP={p.adp} XRank={p.xrank} FpRank={p.fp_rank}")
-        prop_list = [f"{k}={v}" for k, v in p.props.items()]
-        print("   " + " ".join(prop_list))
+        row = [rank, p.name, f"{p.prop_points:.2f}", p.adp, p.xrank, p.fp_rank]
+        for k in position_props(position):
+            if k in p.props:
+                row.append(p.props[k])
+            else:
+                row.append("")
+        table.append(row)
         rank += 1
+    print(tabulate(table, headers=headers))
     print("")
 
 
