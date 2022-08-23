@@ -49,6 +49,7 @@ class Player:
     fp_rank: int
     xrank: int
     props: dict = field(default_factory=dict)
+    prop_points: float = 0.0
 
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
@@ -129,6 +130,19 @@ def header_to_stat_dict() -> dict[str]:
     }
 
 
+def props_points_dict() -> dict[str]:
+    return {
+        "pass_yards": 0.04,
+        "pass_tds": 6.0,
+        "ints": -2.0,
+        "rush_yards": 0.1,
+        "rush_tds": 6.0,
+        "receive_yards": 0.1,
+        "receive_tds": 6.0,
+        "receptions": 0.5,
+    }
+
+
 def name_fixup_dict() -> dict[str]:
     return {
         # Initials
@@ -168,6 +182,16 @@ def remove_players_with_no_props(
     return new_dict
 
 
+def compute_prop_points(env: Env, player_dict: dict[Player]):
+    points_dict = props_points_dict()
+
+    for _, player in player_dict.items():
+        for k, v in player.props.items():
+            # Values may have commas that need replaced before float()
+            # conversion will work.
+            player.prop_points += points_dict[k] * float(v.replace(",", ""))
+
+
 def props_ev():
     env = Env()
 
@@ -175,6 +199,7 @@ def props_ev():
     init_player_dict(env, player_dict)
     parse_props(env, player_dict)
     player_dict = remove_players_with_no_props(env, player_dict)
+    compute_prop_points(env, player_dict)
 
     if env.args.vlevel > 0:
         for k, v in player_dict.items():
