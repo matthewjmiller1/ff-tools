@@ -156,12 +156,25 @@ def get_props_html() -> str:
     return props_html
 
 
+def remove_players_with_no_props(
+    env: Env, player_dict: dict[Player]
+) -> dict[Player]:
+    new_dict = {}
+
+    for k, v in player_dict.items():
+        if v.props:
+            new_dict[k] = v
+
+    return new_dict
+
+
 def props_ev():
     env = Env()
 
     player_dict = {}
     init_player_dict(env, player_dict)
     parse_props(env, player_dict)
+    player_dict = remove_players_with_no_props(env, player_dict)
 
     if env.args.vlevel > 0:
         for k, v in player_dict.items():
