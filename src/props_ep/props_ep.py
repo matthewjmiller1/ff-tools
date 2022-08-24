@@ -3,6 +3,7 @@
 import argparse
 import csv
 import typing
+import re
 import urllib.request
 from dataclasses import dataclass, field
 from bs4 import BeautifulSoup
@@ -13,12 +14,43 @@ from tabulate import tabulate
 class Env:
     """Class to represent the environment state"""
 
+    points_dict: dict
     parser: argparse.ArgumentParser = None
     args: argparse.Namespace = None
 
     def __post_init__(self):
         self.parser = self.get_parser()
         self.args = self.parser.parse_args()
+        self.update_points_dict()
+
+    def update_points_dict(self):
+        if self.args.cfg_file is None:
+            return
+
+        with open(self.args.cfg_file, "r") as f:
+            for line in f:
+
+                # Skip blank lines and comments
+                if line.strip() == "" or line.strip()[0] == "#":
+                    continue
+
+                line_list = line.split(":")
+
+                if len(line_list) != 2:
+                    raise RuntimeError(
+                        f"{f.name} contains a line with an "
+                        f"invalid format: {line}"
+                    )
+
+                stat = line_list[0]
+                val = line_list[1]
+
+                if stat not in self.points_dict:
+                    raise RuntimeError(
+                        f"{f.name} contains an invalid stat: {stat}"
+                    )
+
+                self.points_dict[stat] = float(val)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -26,6 +58,19 @@ class Env:
                 "Compute fantasy football "
                 "expected points based on player prop lines"
             )
+        )
+
+        stats = ", ".join(sorted([v for _, v in header_to_stat_dict().items()]))
+        parser.add_argument(
+            "-c",
+            "--config-file",
+            dest="cfg_file",
+            help=f"""
+            Specify a config file to use for points computation.
+            Valid values are: {stats}.
+            Format of the file is, e.g., "pass_tds: 4.0" with one state per
+            line.
+            """,
         )
 
         parser.add_argument(
@@ -56,7 +101,7 @@ class Player:
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
     csv_fname = "in_csv/draft_rankings_yahoo_half-2022-08-15.csv"
-    with open(csv_fname, newline="") as f:
+    with open(csv_fname, "r", newline="") as f:
 
         reader = csv.DictReader(f)
 
@@ -82,7 +127,7 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 def parse_props(env: Env, player_dict: dict[Player]):
 
     fname = "in_html/vegasinsider-2022-08-14.html"
-    with open(fname) as f:
+    with open(fname, "r") as f:
         props_soup = BeautifulSoup(f, "html.parser")
 
         if env.args.vlevel > 5:
@@ -199,13 +244,20 @@ def remove_players_with_no_props(
 
 
 def compute_prop_points(env: Env, player_dict: dict[Player]):
-    points_dict = props_points_dict()
+    points_dict = env.points_dict
 
     for _, player in player_dict.items():
         for k, v in player.props.items():
             # Values may have commas that need replaced before float()
             # conversion will work.
             player.prop_points += points_dict[k] * float(v.replace(",", ""))
+
+
+def display_point_values(env: Env):
+    print("Points values:")
+    for k, v in env.points_dict.items():
+        print(f"   {k}: {v}")
+    print()
 
 
 def display_position(env: Env, player_dict: dict[Player], position: str):
@@ -235,7 +287,7 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
 
 
 def props_ev():
-    env = Env()
+    env = Env(props_points_dict())
 
     player_dict = {}
     init_player_dict(env, player_dict)
@@ -247,6 +299,7 @@ def props_ev():
         for k, v in player_dict.items():
             print(v)
 
+    display_point_values(env)
     display_position(env, player_dict, "QB")
     display_position(env, player_dict, "RB")
     display_position(env, player_dict, "WR")
