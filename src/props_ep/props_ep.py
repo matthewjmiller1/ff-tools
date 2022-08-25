@@ -118,9 +118,18 @@ class Player:
     prop_points: float = 0.0
 
 
+@dataclass
+class DataDownload:
+    """Class to represent data download info"""
+
+    url: str
+    local_file_prefix: str
+    local_file_ext: str
+
+
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
-    csv_fname = "in_csv/draft_rankings_yahoo_half-2022-08-15.csv"
+    csv_fname = "in_rankings/draft_rankings_yahoo_half-2022-08-15.csv"
     with open(csv_fname, "r", newline="") as f:
 
         reader = csv.DictReader(f)
@@ -146,7 +155,7 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
 def parse_props(env: Env, player_dict: dict[Player]):
 
-    fname = "in_html/vegasinsider-2022-08-24.html"
+    fname = "in_props/vegasinsider-2022-08-24.html"
     with open(fname, "r") as f:
         props_soup = BeautifulSoup(f, "html.parser")
 
@@ -294,20 +303,14 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
     print("")
 
 
-def get_props_html(env: Env):
+def get_props_data(env: Env, info: DataDownload):
     out_dir = f"{env.args.directory}/" if env.args.directory != None else ""
 
-    props_url = (
-        "https://www.vegasinsider.com/nfl/odds/player-prop-betting-odds/"
-    )
-
     now = datetime.now()
-    out_fname = (
-        f"{out_dir}vegasinsider-{now.year}-{now.month:02d}-{now.day:02d}.html"
-    )
+    out_fname = f"{out_dir}{info.local_file_prefix}-{now.year}-{now.month:02d}-{now.day:02d}.{info.local_file_ext}"
 
     props_req = urllib.request.Request(
-        props_url, headers={"User-Agent": "Mozilla/5.0"}
+        info.url, headers={"User-Agent": "Mozilla/5.0"}
     )
 
     with urllib.request.urlopen(props_req) as response, open(
@@ -317,7 +320,22 @@ def get_props_html(env: Env):
 
 
 def do_download(env: Env):
-    get_props_html(env)
+    get_props_data(
+        env,
+        DataDownload(
+            "https://www.vegasinsider.com/nfl/odds/player-prop-betting-odds/",
+            "vegasinsider",
+            "html",
+        ),
+    )
+    get_props_data(
+        env,
+        DataDownload(
+            "https://sportsbook.draftkings.com//sites/US-SB/api/v5/eventgroups/88808/categories/782/subcategories/8415",
+            "dk_rush_recv",
+            "json",
+        ),
+    )
 
 
 def props_ev():
