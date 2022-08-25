@@ -5,6 +5,7 @@ import csv
 import typing
 import re
 import shutil
+import json
 from datetime import datetime
 import urllib.request
 from dataclasses import dataclass, field
@@ -151,6 +152,46 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
             if env.args.vlevel > 2:
                 print(player_dict[row["Name"]])
+
+
+def parse_total_yards(env: Env, player_dict: dict[Player]):
+
+    fname = "in_props/dk_total_yards-2022-08-24.json"
+    with open(fname, "r") as f:
+        data = json.load(f)
+
+        player_totals = None
+        for category in data["eventGroup"]["offerCategories"]:
+            if category["name"] == "Player Totals":
+                player_totals = category
+                break
+
+        total_yards = None
+        for subcategory in player_totals["offerSubcategoryDescriptors"]:
+            if subcategory["name"] == "Rushing + Receiving Yards":
+                total_yards = subcategory
+                break
+
+        offers = total_yards["offerSubcategory"]["offers"][0]
+
+        pat_name = re.compile("(.*) Regular Season Rush & Rec Yards")
+        pat_yards = re.compile("(?:Over|Under)\s+(\d+[.]?\d*)")
+        for offer in offers:
+            m = pat_name.match(offer["label"])
+            if m != None:
+                name = m.group(1)
+                outcomes = offer["outcomes"][0]["label"]
+                m2 = pat_yards.match(outcomes)
+                if m2 != None:
+                    # TODO:
+                    # Add name/yards to player dict for difference
+                    # with existing rush/recv yards
+                    yards = m2.group(1)
+                    if env.args.vlevel > 2:
+                        print(f"Name={name}, Total yards={yards}")
+                if env.args.vlevel > 5:
+                    print(f"DEBUG {outcomes}")
+                    print(f"DEBUG {offer}")
 
 
 def parse_props(env: Env, player_dict: dict[Player]):
@@ -332,7 +373,7 @@ def do_download(env: Env):
         env,
         DataDownload(
             "https://sportsbook.draftkings.com//sites/US-SB/api/v5/eventgroups/88808/categories/782/subcategories/8415",
-            "dk_rush_recv",
+            "dk_total_yards",
             "json",
         ),
     )
@@ -348,6 +389,7 @@ def props_ev():
     player_dict = {}
     init_player_dict(env, player_dict)
     parse_props(env, player_dict)
+    parse_total_yards(env, player_dict)
     player_dict = remove_players_with_no_props(env, player_dict)
     compute_prop_points(env, player_dict)
 
