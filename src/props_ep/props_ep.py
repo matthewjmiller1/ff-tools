@@ -4,6 +4,8 @@ import argparse
 import csv
 import typing
 import re
+import shutil
+from datetime import datetime
 import urllib.request
 from dataclasses import dataclass, field
 from bs4 import BeautifulSoup
@@ -74,6 +76,24 @@ class Env:
         )
 
         parser.add_argument(
+            "-d",
+            "--download-props",
+            dest="do_download",
+            default=False,
+            action="store_true",
+            help="""
+            Download the props site data.
+            """,
+        )
+
+        parser.add_argument(
+            "--directory",
+            help="""
+            The directory to download props data.
+            """,
+        )
+
+        parser.add_argument(
             "-v",
             "--verbose",
             dest="vlevel",
@@ -126,7 +146,7 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
 def parse_props(env: Env, player_dict: dict[Player]):
 
-    fname = "in_html/vegasinsider-2022-08-14.html"
+    fname = "in_html/vegasinsider-2022-08-24.html"
     with open(fname, "r") as f:
         props_soup = BeautifulSoup(f, "html.parser")
 
@@ -219,18 +239,6 @@ def name_fixup_dict() -> dict[str]:
     }
 
 
-def get_props_html() -> str:
-    props_url = (
-        "https://www.vegasinsider.com/nfl/odds/player-prop-betting-odds/"
-    )
-    props_req = urllib.request.Request(
-        props_url, headers={"User-Agent": "Mozilla/5.0"}
-    )
-    props_html = urllib.request.urlopen(props_req)
-
-    return props_html
-
-
 def remove_players_with_no_props(
     env: Env, player_dict: dict[Player]
 ) -> dict[Player]:
@@ -286,8 +294,38 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
     print("")
 
 
+def get_props_html(env: Env):
+    out_dir = f"{env.args.directory}/" if env.args.directory != None else ""
+
+    props_url = (
+        "https://www.vegasinsider.com/nfl/odds/player-prop-betting-odds/"
+    )
+
+    now = datetime.now()
+    out_fname = (
+        f"{out_dir}vegasinsider-{now.year}-{now.month:02d}-{now.day:02d}.html"
+    )
+
+    props_req = urllib.request.Request(
+        props_url, headers={"User-Agent": "Mozilla/5.0"}
+    )
+
+    with urllib.request.urlopen(props_req) as response, open(
+        out_fname, "wb"
+    ) as out_file:
+        shutil.copyfileobj(response, out_file)
+
+
+def do_download(env: Env):
+    get_props_html(env)
+
+
 def props_ev():
     env = Env(props_points_dict())
+
+    if env.args.do_download:
+        do_download(env)
+        return
 
     player_dict = {}
     init_player_dict(env, player_dict)
