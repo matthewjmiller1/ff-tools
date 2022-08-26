@@ -118,6 +118,21 @@ class Player:
     props: dict = field(default_factory=dict)
     prop_points: float = 0.0
 
+    def update_total_yards_stat(
+        self, existing_stat: str, update_stat: str, total_yards: str
+    ):
+        if existing_stat in self.props and update_stat not in self.props:
+            self.props[update_stat] = str(
+                float(total_yards) - float(self.props[existing_stat])
+            )
+
+    def adjust_for_total_yards(self, total_yards: str):
+        # If total yards is given for a player, update, e.g., projected receive
+        # yards for RBs by computing their projected total yards minus their
+        # projected rush yards.
+        self.update_total_yards_stat("receive_yards", "rush_yards", total_yards)
+        self.update_total_yards_stat("rush_yards", "receive_yards", total_yards)
+
 
 @dataclass
 class DataDownload:
@@ -156,6 +171,8 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
 def parse_total_yards(env: Env, player_dict: dict[Player]):
 
+    fixup_dict = name_fixup_dict()
+
     fname = "in_props/dk_total_yards-2022-08-24.json"
     with open(fname, "r") as f:
         data = json.load(f)
@@ -183,12 +200,18 @@ def parse_total_yards(env: Env, player_dict: dict[Player]):
                 outcomes = offer["outcomes"][0]["label"]
                 m2 = pat_yards.match(outcomes)
                 if m2 != None:
-                    # TODO:
-                    # Add name/yards to player dict for difference
-                    # with existing rush/recv yards
                     yards = m2.group(1)
                     if env.args.vlevel > 2:
                         print(f"Name={name}, Total yards={yards}")
+
+                    if name in fixup_dict:
+                        name = fixup_dict[name]
+
+                    if name not in player_dict:
+                        raise RuntimeError(f"{name} not found in database")
+
+                    player_dict[name].adjust_for_total_yards(yards)
+
                 if env.args.vlevel > 5:
                     print(f"DEBUG {outcomes}")
                     print(f"DEBUG {offer}")
@@ -267,7 +290,7 @@ def position_props(position: str) -> list[str]:
     position_dict = {
         "QB": pass_stats + rush_stats,
         "RB": rush_stats + receive_stats,
-        "WR": receive_stats,
+        "WR": receive_stats + rush_stats,
         "TE": receive_stats,
     }
 
@@ -281,6 +304,7 @@ def name_fixup_dict() -> dict[str]:
         "D.J. Moore": "DJ Moore",
         "D.K. Metcalf": "DK Metcalf",
         # Suffixes
+        "Travis Etienne Jr": "Travis Etienne",
         "Travis Etienne, Jr.": "Travis Etienne",
         "Michael Pittman, Jr.": "Michael Pittman",
         # Misspellings
