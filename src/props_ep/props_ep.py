@@ -145,7 +145,7 @@ class DataDownload:
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
-    csv_fname = "in_rankings/draft_rankings_yahoo_half-2022-08-15.csv"
+    csv_fname = "in_rankings/draft_rankings_yahoo_half-2022-08-27.csv"
     with open(csv_fname, "r", newline="") as f:
 
         reader = csv.DictReader(f)
