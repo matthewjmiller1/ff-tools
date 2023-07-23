@@ -32,7 +32,6 @@ class Env:
 
         with open(self.args.cfg_file, "r") as f:
             for line in f:
-
                 # Skip blank lines and comments
                 if line.strip() == "" or line.strip()[0] == "#":
                     continue
@@ -144,10 +143,8 @@ class DataDownload:
 
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
-
-    csv_fname = "in_rankings/draft_rankings_yahoo_half-2022-08-27.csv"
+    csv_fname = "in_rankings/draft_rankings_yahoo_half-2023-07-23.csv"
     with open(csv_fname, "r", newline="") as f:
-
         reader = csv.DictReader(f)
 
         for row in reader:
@@ -170,7 +167,6 @@ def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
 
 
 def parse_total_yards(env: Env, player_dict: dict[Player]):
-
     fixup_dict = name_fixup_dict()
 
     fname = "in_props/dk_total_yards-2022-08-24.json"
@@ -218,7 +214,6 @@ def parse_total_yards(env: Env, player_dict: dict[Player]):
 
 
 def parse_props(env: Env, player_dict: dict[Player]):
-
     fname = "in_props/vegasinsider-2022-08-24.html"
     with open(fname, "r") as f:
         props_soup = BeautifulSoup(f, "html.parser")
@@ -256,6 +251,43 @@ def parse_props(env: Env, player_dict: dict[Player]):
                     player_dict[name].props[stat_dict[header.text]] = val
 
 
+def parse_props2(env: Env, player_dict: dict[Player]):
+    csv_fname = "in_props/dk_props_2023-07-23.csv"
+    with open(csv_fname, "r", newline="") as f:
+        stat_dict = header_to_stat_dict2()
+        fixup_dict = name_fixup_dict()
+        skip_list = name_skip_list()
+
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            if env.args.vlevel > 3:
+                print(row)
+
+            name = row["Player Name"]
+
+            if name in fixup_dict:
+                name = fixup_dict[name]
+
+            if name in skip_list:
+                if env.args.vlevel > 2:
+                    print(f"Skipping {name}")
+                continue
+
+            if name not in player_dict:
+                raise RuntimeError(f"{name} not found in database")
+
+            if env.args.vlevel > 4:
+                print(name)
+
+            for k, v in row.items():
+                if env.args.vlevel > 4:
+                    print(f"  {k} = {v}")
+
+                if k in stat_dict.keys():
+                    player_dict[name].props[stat_dict[k]] = v
+
+
 def header_to_stat_dict() -> dict[str]:
     return {
         "2022-23 NFL PASSING YARDS TOTALS": "pass_yards",
@@ -266,6 +298,19 @@ def header_to_stat_dict() -> dict[str]:
         "2022-23 NFL RECEIVING YARDS TOTALS": "receive_yards",
         "2022-23 NFL RECEIVING TD TOTALS": "receive_tds",
         "2022-23 NFL RECEPTIONS TOTALS": "receptions",
+    }
+
+
+def header_to_stat_dict2() -> dict[str]:
+    return {
+        "Pass Yards": "pass_yards",
+        "Pass TDs": "pass_tds",
+        "Ints": "ints",
+        "Rush Yards": "rush_yards",
+        "Rush TDs": "rush_tds",
+        "Rec Yards": "receive_yards",
+        "Rec TDs": "receive_tds",
+        "Receptions": "receptions",
     }
 
 
@@ -297,12 +342,21 @@ def position_props(position: str) -> list[str]:
     return position_dict[position]
 
 
+def name_skip_list() -> list[str]:
+    return {
+        "Desmond Ridder",
+    }
+
+
 def name_fixup_dict() -> dict[str]:
     return {
         # Initials
         "A.J. Dillon": "AJ Dillon",
         "D.J. Moore": "DJ Moore",
         "D.K. Metcalf": "DK Metcalf",
+        "CJ Stroud": "C.J. Stroud",
+        "JK Dobbins": "J.K. Dobbins",
+        "TJ Hockenson": "T.J. Hockenson",
         # Suffixes
         "Travis Etienne Jr": "Travis Etienne",
         "Travis Etienne, Jr.": "Travis Etienne",
@@ -412,8 +466,8 @@ def props_ev():
 
     player_dict = {}
     init_player_dict(env, player_dict)
-    parse_props(env, player_dict)
-    parse_total_yards(env, player_dict)
+    parse_props2(env, player_dict)
+    # parse_total_yards(env, player_dict)
     player_dict = remove_players_with_no_props(env, player_dict)
     compute_prop_points(env, player_dict)
 
