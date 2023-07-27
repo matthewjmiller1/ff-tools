@@ -357,6 +357,7 @@ def name_fixup_dict() -> dict[str]:
         "CJ Stroud": "C.J. Stroud",
         "JK Dobbins": "J.K. Dobbins",
         "TJ Hockenson": "T.J. Hockenson",
+        "AJ Brown": "A.J. Brown",
         # Suffixes
         "Travis Etienne Jr": "Travis Etienne",
         "Travis Etienne, Jr.": "Travis Etienne",
@@ -384,6 +385,10 @@ def compute_prop_points(env: Env, player_dict: dict[Player]):
 
     for _, player in player_dict.items():
         for k, v in player.props.items():
+            # Skip stats not filled in for the player
+            if v == "":
+                continue
+
             # Values may have commas that need replaced before float()
             # conversion will work.
             player.prop_points += points_dict[k] * float(v.replace(",", ""))
