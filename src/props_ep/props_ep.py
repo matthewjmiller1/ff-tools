@@ -143,7 +143,7 @@ class DataDownload:
 
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
-    csv_fname = "in_rankings/draft_rankings_yahoo_half-2023-07-23.csv"
+    csv_fname = "in_rankings/draft_rankings_yahoo_half-2023-08-12.csv"
     with open(csv_fname, "r", newline="") as f:
         reader = csv.DictReader(f)
 
@@ -252,7 +252,7 @@ def parse_props(env: Env, player_dict: dict[Player]):
 
 
 def parse_props2(env: Env, player_dict: dict[Player]):
-    csv_fname = "in_props/dk_props_2023-07-23.csv"
+    csv_fname = "in_props/dk_props_2023-08-12.csv"
     with open(csv_fname, "r", newline="") as f:
         stat_dict = header_to_stat_dict2()
         fixup_dict = name_fixup_dict()
@@ -345,6 +345,8 @@ def position_props(position: str) -> list[str]:
 def name_skip_list() -> list[str]:
     return {
         "Desmond Ridder",
+        "Brandon Cooks",
+        "Isiah Hodgins",
     }
 
 
