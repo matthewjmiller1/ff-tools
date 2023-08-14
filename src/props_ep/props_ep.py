@@ -8,23 +8,53 @@ import shutil
 import json
 from datetime import datetime
 import urllib.request
-from dataclasses import dataclass, field
+import dataclasses
 from bs4 import BeautifulSoup
 from tabulate import tabulate
+import fpdf
+import pathlib
 
 
-@dataclass
+@dataclasses.dataclass
 class Env:
     """Class to represent the environment state"""
 
     points_dict: dict
-    parser: argparse.ArgumentParser = None
-    args: argparse.Namespace = None
+    parser: argparse.ArgumentParser = dataclasses.field(
+        default=None, init=False
+    )
+    args: argparse.Namespace = dataclasses.field(default=None, init=False)
+    pdf: fpdf.FPDF = fpdf.FPDF(orientation="landscape", format="letter")
+
+    date_str: str = dataclasses.field(default="2023-08-12", init=False)
+
+    do_pdf: bool = dataclasses.field(default=True, init=False)
+    do_stdout: bool = dataclasses.field(default=True, init=False)
 
     def __post_init__(self):
         self.parser = self.get_parser()
         self.args = self.parser.parse_args()
         self.update_points_dict()
+
+        self.pdf.add_page()
+        self.pdf.set_font("Courier", size=8)
+
+    def write_file(self):
+        if not self.do_pdf:
+            return
+
+        cfg_str = "none"
+        if self.args.cfg_file is not None:
+            cfg_str = pathlib.Path(self.args.cfg_file).stem
+
+        self.pdf.output(f"out_pdf/stats-cfg-{cfg_str}-{self.date_str}.pdf")
+
+    def output(self, string: str = ""):
+        if self.do_pdf:
+            self.pdf.write(txt=string + "\n")
+
+        if self.do_stdout:
+            print(string)
 
     def update_points_dict(self):
         if self.args.cfg_file is None:
@@ -105,7 +135,7 @@ class Env:
         return parser
 
 
-@dataclass
+@dataclasses.dataclass
 class Player:
     """Class to represent a player"""
 
@@ -114,7 +144,7 @@ class Player:
     adp: int
     fp_rank: int
     xrank: int
-    props: dict = field(default_factory=dict)
+    props: dict = dataclasses.field(default_factory=dict)
     prop_points: float = 0.0
 
     def update_total_yards_stat(
@@ -129,11 +159,11 @@ class Player:
         # If total yards is given for a player, update, e.g., projected receive
         # yards for RBs by computing their projected total yards minus their
         # projected rush yards.
-        self.update_total_yards_stat("receive_yards", "rush_yards", total_yards)
-        self.update_total_yards_stat("rush_yards", "receive_yards", total_yards)
+        self.update_total_yards_stat("rcv_yds", "rush_yds", total_yards)
+        self.update_total_yards_stat("rush_yds", "rcv_yds", total_yards)
 
 
-@dataclass
+@dataclasses.dataclass
 class DataDownload:
     """Class to represent data download info"""
 
@@ -143,7 +173,7 @@ class DataDownload:
 
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
-    csv_fname = "in_rankings/draft_rankings_yahoo_half-2023-08-12.csv"
+    csv_fname = f"in_rankings/draft_rankings_yahoo_half-{env.date_str}.csv"
     with open(csv_fname, "r", newline="") as f:
         reader = csv.DictReader(f)
 
@@ -252,7 +282,7 @@ def parse_props(env: Env, player_dict: dict[Player]):
 
 
 def parse_props2(env: Env, player_dict: dict[Player]):
-    csv_fname = "in_props/dk_props_2023-08-12.csv"
+    csv_fname = f"in_props/dk_props_{env.date_str}.csv"
     with open(csv_fname, "r", newline="") as f:
         stat_dict = header_to_stat_dict2()
         fixup_dict = name_fixup_dict()
@@ -290,47 +320,47 @@ def parse_props2(env: Env, player_dict: dict[Player]):
 
 def header_to_stat_dict() -> dict[str]:
     return {
-        "2022-23 NFL PASSING YARDS TOTALS": "pass_yards",
+        "2022-23 NFL PASSING YARDS TOTALS": "pass_yds",
         "2022-23 NFL PASSING TD TOTALS": "pass_tds",
         "2022-23 NFL INTERCEPTIONS THROWN TOTALS": "ints",
-        "2022-23 NFL RUSHING YARDS TOTALS": "rush_yards",
+        "2022-23 NFL RUSHING YARDS TOTALS": "rush_yds",
         "2022-23 NFL RUSHING TD TOTALS": "rush_tds",
-        "2022-23 NFL RECEIVING YARDS TOTALS": "receive_yards",
-        "2022-23 NFL RECEIVING TD TOTALS": "receive_tds",
-        "2022-23 NFL RECEPTIONS TOTALS": "receptions",
+        "2022-23 NFL RECEIVING YARDS TOTALS": "rcv_yds",
+        "2022-23 NFL RECEIVING TD TOTALS": "rcv_tds",
+        "2022-23 NFL RECEPTIONS TOTALS": "recepts",
     }
 
 
 def header_to_stat_dict2() -> dict[str]:
     return {
-        "Pass Yards": "pass_yards",
+        "Pass Yards": "pass_yds",
         "Pass TDs": "pass_tds",
         "Ints": "ints",
-        "Rush Yards": "rush_yards",
+        "Rush Yards": "rush_yds",
         "Rush TDs": "rush_tds",
-        "Rec Yards": "receive_yards",
-        "Rec TDs": "receive_tds",
-        "Receptions": "receptions",
+        "Rec Yards": "rcv_yds",
+        "Rec TDs": "rcv_tds",
+        "Receptions": "recepts",
     }
 
 
 def props_points_dict() -> dict[str]:
     return {
-        "pass_yards": 0.04,
+        "pass_yds": 0.04,
         "pass_tds": 6.0,
         "ints": -2.0,
-        "rush_yards": 0.1,
+        "rush_yds": 0.1,
         "rush_tds": 6.0,
-        "receive_yards": 0.1,
-        "receive_tds": 6.0,
-        "receptions": 0.5,
+        "rcv_yds": 0.1,
+        "rcv_tds": 6.0,
+        "recepts": 0.5,
     }
 
 
 def position_props(position: str) -> list[str]:
-    pass_stats = ["pass_yards", "pass_tds", "ints"]
-    rush_stats = ["rush_yards", "rush_tds"]
-    receive_stats = ["receive_yards", "receive_tds", "receptions"]
+    pass_stats = ["pass_yds", "pass_tds", "ints"]
+    rush_stats = ["rush_yds", "rush_tds"]
+    receive_stats = ["rcv_yds", "rcv_tds", "recepts"]
 
     position_dict = {
         "QB": pass_stats + rush_stats,
@@ -397,10 +427,10 @@ def compute_prop_points(env: Env, player_dict: dict[Player]):
 
 
 def display_point_values(env: Env):
-    print("Points values:")
+    env.output("Points values:")
     for k, v in env.points_dict.items():
-        print(f"   {k}: {v}")
-    print()
+        env.output(f"   {k}: {v}")
+    env.output()
 
 
 def display_position(env: Env, player_dict: dict[Player], position: str):
@@ -411,7 +441,7 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
 
     player_list.sort(key=lambda player: player.prop_points, reverse=True)
 
-    print(f"{position} Ranks")
+    env.output(f"{position} Ranks")
     rank = 1
     headers = ["Rank", "Name", "Prop Points", "ADP", "XRank", "FP Rank"]
     headers.extend(position_props(position))
@@ -425,8 +455,8 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
                 row.append("")
         table.append(row)
         rank += 1
-    print(tabulate(table, headers=headers))
-    print("")
+    env.output(tabulate(table, headers=headers, tablefmt="grid"))
+    env.output()
 
 
 def get_props_data(env: Env, info: DataDownload):
@@ -487,6 +517,8 @@ def props_ev():
     display_position(env, player_dict, "RB")
     display_position(env, player_dict, "WR")
     display_position(env, player_dict, "TE")
+
+    env.write_file()
 
 
 if __name__ == "__main__":
