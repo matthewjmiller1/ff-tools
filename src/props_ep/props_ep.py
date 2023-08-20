@@ -26,7 +26,8 @@ class Env:
     args: argparse.Namespace = dataclasses.field(default=None, init=False)
     pdf: fpdf.FPDF = fpdf.FPDF(orientation="landscape", format="letter")
 
-    date_str: str = dataclasses.field(default="2023-08-12", init=False)
+    rankings_date_str: str = dataclasses.field(default="2023-08-20", init=False)
+    props_date_str: str = dataclasses.field(default="2023-08-12", init=False)
 
     do_pdf: bool = dataclasses.field(default=True, init=False)
     do_stdout: bool = dataclasses.field(default=True, init=False)
@@ -47,7 +48,9 @@ class Env:
         if self.args.cfg_file is not None:
             cfg_str = pathlib.Path(self.args.cfg_file).stem
 
-        self.pdf.output(f"out_pdf/stats-cfg-{cfg_str}-{self.date_str}.pdf")
+        self.pdf.output(
+            f"out_pdf/stats-cfg-{cfg_str}-{self.rankings_date_str}.pdf"
+        )
 
     def output(self, string: str = ""):
         if self.do_pdf:
@@ -173,7 +176,9 @@ class DataDownload:
 
 
 def init_player_dict(env: Env, player_dict: typing.Dict[str, Player]):
-    csv_fname = f"in_rankings/draft_rankings_yahoo_half-{env.date_str}.csv"
+    csv_fname = (
+        f"in_rankings/draft_rankings_yahoo_half-{env.rankings_date_str}.csv"
+    )
     with open(csv_fname, "r", newline="") as f:
         reader = csv.DictReader(f)
 
@@ -282,7 +287,7 @@ def parse_props(env: Env, player_dict: dict[Player]):
 
 
 def parse_props2(env: Env, player_dict: dict[Player]):
-    csv_fname = f"in_props/dk_props_{env.date_str}.csv"
+    csv_fname = f"in_props/dk_props_{env.props_date_str}.csv"
     with open(csv_fname, "r", newline="") as f:
         stat_dict = header_to_stat_dict2()
         fixup_dict = name_fixup_dict()
@@ -365,7 +370,7 @@ def position_props(position: str) -> list[str]:
     position_dict = {
         "QB": pass_stats + rush_stats,
         "RB": rush_stats + receive_stats,
-        "WR": receive_stats + rush_stats,
+        "WR": receive_stats,
         "TE": receive_stats,
     }
 
@@ -443,11 +448,19 @@ def display_position(env: Env, player_dict: dict[Player], position: str):
 
     env.output(f"{position} Ranks")
     rank = 1
-    headers = ["Rank", "Name", "Prop Points", "ADP", "XRank", "FP Rank"]
+    headers = ["Rank", "Name", "Prop Points", "PPG", "ADP", "XRank", "FP Rank"]
     headers.extend(position_props(position))
     table = []
     for p in player_list:
-        row = [rank, p.name, f"{p.prop_points:.2f}", p.adp, p.xrank, p.fp_rank]
+        row = [
+            rank,
+            p.name,
+            f"{p.prop_points:.2f}",
+            f"{(p.prop_points / 17.0):.2f}",
+            p.adp,
+            p.xrank,
+            p.fp_rank,
+        ]
         for k in position_props(position):
             if k in p.props:
                 row.append(p.props[k])
