@@ -27,7 +27,7 @@ class Env:
     pdf: fpdf.FPDF = fpdf.FPDF(orientation="landscape", format="letter")
 
     rankings_date_str: str = dataclasses.field(default="2023-08-20", init=False)
-    props_date_str: str = dataclasses.field(default="2023-08-12", init=False)
+    props_date_str: str = dataclasses.field(default="2023-08-20", init=False)
 
     do_pdf: bool = dataclasses.field(default=True, init=False)
     do_stdout: bool = dataclasses.field(default=True, init=False)
