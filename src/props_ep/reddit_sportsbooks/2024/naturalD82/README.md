@@ -1,6 +1,9 @@
 # Source
 
-- <https://www.reddit.com/r/fantasyfootball/comments/1evo18l/player_valuation_analysis_using_sportsbook/>
+- Post
+    - <https://www.reddit.com/r/fantasyfootball/comments/1evo18l/player_valuation_analysis_using_sportsbook/>
+- User
+    - <https://www.reddit.com/user/naturalD82/submitted/>
 
 ## Prop Sources
 
